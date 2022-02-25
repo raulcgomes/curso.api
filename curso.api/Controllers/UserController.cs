@@ -3,8 +3,13 @@ using curso.api.Models;
 using curso.api.Models.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
+using System;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
+using System.Text;
 
 namespace curso.api.Controllers
 {
@@ -29,8 +34,38 @@ namespace curso.api.Controllers
             {
                 return BadRequest(new ValidaCampoViewModeIOutput(ModelState.SelectMany(sm => sm.Value.Errors).Select(s => s.ErrorMessage)));
             }*/
+            var userViewModelOutput = new UserViewModelOutput()
+            {
+                Code = 1,
+                Login = "raul.gomes",
+                Email = "raul.gomes@gmail.com"
+            };
 
-            return Ok(loginViewModelInput);
+
+
+            var secret = Encoding.ASCII.GetBytes("MzfsT&d9gprP>!9$Es(X!5g@;ef!5sbk:jH\\2.}8ZP'qY#7");
+            var symmetricSecurityKey = new SymmetricSecurityKey(secret);
+            var securityTokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, userViewModelOutput.Code.ToString()),
+                    new Claim(ClaimTypes.Name, userViewModelOutput.Login.ToString()),
+                    new Claim(ClaimTypes.Email, userViewModelOutput.Email.ToString()),
+                }),
+                Expires = DateTime.UtcNow.AddDays(1),
+                SigningCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256Signature),
+            };
+            var jwtSecurityTokenHandler = new JwtSecurityTokenHandler();
+            var tokenGenerated = jwtSecurityTokenHandler.CreateToken(securityTokenDescriptor);
+            var token = jwtSecurityTokenHandler.WriteToken(tokenGenerated);
+
+
+            return Ok(new
+            {
+                Token = token,
+                User = userViewModelOutput,
+            });
         }
 
         [HttpPost]
