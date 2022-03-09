@@ -1,8 +1,11 @@
-﻿using curso.api.Filters;
+﻿using curso.api.Business.Entities;
+using curso.api.Filters;
+using curso.api.Infrastructure.Data;
 using curso.api.Models;
 using curso.api.Models.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
 using System;
@@ -68,13 +71,38 @@ namespace curso.api.Controllers
             });
         }
 
+        /// <summary>
+        /// This service allows to register unregistered users
+        /// </summary>
+        /// <param name="loginViewModelInput">View model resgister login</param>
+        /// <returns></returns>
+        [SwaggerResponse(statusCode: 200, description: "Success on the auth", Type = typeof(LoginViewModelInput))]
+        [SwaggerResponse(statusCode: 400, description: "Mandatory fields needs attention", Type = typeof(ValidateFieldViewModeIOutput))]
+        [SwaggerResponse(statusCode: 500, description: "Internal server error", Type = typeof(GenericErrorViewModel))]
         [HttpPost]
         [Route("register")]
         [ValidateModelStateCustom]
-        public IActionResult Register(RegisterViewModelInput registerViewModelInput)
+        public IActionResult Register(RegisterViewModelInput loginViewModelInput)
         {
+            var optionsBilder = new DbContextOptionsBuilder<CourseDbContext>();
+            optionsBilder.UseSqlServer("Server=localhost\\SQLEXPRESS;Database=DOTNETCOURSE;Trusted_Connection=True;");
+            CourseDbContext context = new CourseDbContext(optionsBilder.Options);
 
-            return Created("", registerViewModelInput);
+            var pendingMigrations = context.Database.GetPendingMigrations();
+
+            if (pendingMigrations.Count() > 0)
+            {
+                context.Database.Migrate();
+            }
+
+            var user = new User();
+            user.Login = loginViewModelInput.Login;
+            user.Password = loginViewModelInput.Password;
+            user.Email = loginViewModelInput.Email;
+            context.User.Add(user);
+            context.SaveChanges();
+
+            return Created("", loginViewModelInput);
         }
     }
 }
