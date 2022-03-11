@@ -1,10 +1,13 @@
-﻿using curso.api.Models;
+﻿using curso.api.Business.Entities;
+using curso.api.Business.Repositories;
+using curso.api.Models;
 using curso.api.Models.Course;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -14,6 +17,13 @@ namespace curso.api.Controllers
     [ApiController]
     public class CourseController : ControllerBase
     {
+        private readonly ICourseRepository _courseRepository;
+
+        public CourseController(ICourseRepository courseRepository)
+        {
+            _courseRepository = courseRepository;
+        }
+
         /// <summary>
         /// This service allows to create a course for the auth user.
         /// </summary>
@@ -25,7 +35,13 @@ namespace curso.api.Controllers
 
         public async Task<IActionResult> Post(CouseViewModelInput courseViewModelInput)
         {
+            Course course = new Course();
+            course.Name = courseViewModelInput.Name;
+            course.Description = courseViewModelInput.Description;
             var userCode = int.Parse(User.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value);
+            course.UserId = userCode;
+            _courseRepository.Add(course);
+            _courseRepository.Commit();
             return Created("", courseViewModelInput);
         }
 
@@ -40,15 +56,13 @@ namespace curso.api.Controllers
         [Authorize]
         public async Task<IActionResult> Get()
         {
-            var courses = new List<CourseViewModelOutput>();
-
-            //var userCode = int.Parse(User.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value);
-
-            courses.Add(new CourseViewModelOutput()
+            var userCode = int.Parse(User.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value);
+            
+            var courses = _courseRepository.GetByUser(userCode).Select(s => new CourseViewModelOutput()
             {
-                Login = "",
-                Description = "Test",
-                Name = "Test"
+                Name = s.Name,
+                Description = s.Description,
+                Login = s.User.Login
             });
 
             return Ok(courses);

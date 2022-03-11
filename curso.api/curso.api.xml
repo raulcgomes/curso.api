@@ -23,5 +23,12 @@
             <param name="loginViewModelInput"></param>
             <returns></returns>
         </member>
+        <member name="M:curso.api.Controllers.UserController.Register(curso.api.Models.Users.RegisterViewModelInput)">
+            <summary>
+            This service allows to register unregistered users
+            </summary>
+            <param name="loginViewModelInput">View model resgister login</param>
+            <returns></returns>
+        </member>
     </members>
 </doc>
